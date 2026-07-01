@@ -419,7 +419,7 @@ async function renderMembers() {
     const members = r.members;
     let html = '<div class="member-grid">';
     members.forEach(m => {
-      const avatarSrc = m.avatar ? '/uploads/'+m.avatar : 'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60"><rect fill="#E8D5B7" width="60" height="60" rx="30"/><text x="30" y="38" text-anchor="middle" font-size="24">👤</text></svg>');
+      const avatarSrc = m.avatar ? '/uploads/'+m.avatar+'?t='+m.id : 'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60"><rect fill="#E8D5B7" width="60" height="60" rx="30"/><text x="30" y="38" text-anchor="middle" font-size="24">👤</text></svg>');
       html += '<div class="member-card" data-id="'+m.id+'">'
             + '<img class="member-avatar" src="'+avatarSrc+'" alt="'+esc(m.name)+'" loading="lazy">'
             + '<div class="member-name">'+esc(m.name)+'</div>'
@@ -449,7 +449,7 @@ async function showMemberDetail(memberId) {
     const r = await API.getMember(memberId);
     const m = r.member;
     const photos = r.photos;
-    const avatarSrc = m.avatar ? '/uploads/'+m.avatar : '';
+    const avatarSrc = m.avatar ? '/uploads/'+m.avatar+'?t='+Date.now() : '';
 
     let html = '<div style="text-align:center;">';
     if (avatarSrc) html += '<img src="'+avatarSrc+'" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--gold-light);margin-bottom:8px;">';
@@ -530,7 +530,8 @@ async function renderMy() {
   // Refresh user data
   try { const r = await API.me(); currentUser = r.user; } catch(e) {}
 
-  const avatarSrc = currentUser.avatar ? '/uploads/'+currentUser.avatar : '';
+  const noCache = '?t=' + Date.now();
+  const avatarSrc = currentUser.avatar ? '/uploads/'+currentUser.avatar + noCache : '';
   const isAdmin = currentUser.is_admin;
 
   let html = '<div class="my-profile">';
