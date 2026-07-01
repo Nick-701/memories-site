@@ -6,7 +6,7 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 const { db, userQueries } = require('./db/database');
 
-const app = express();
+const DATA_DIR = process.env.DATA_DIR || __dirname;
 const PORT = process.env.PORT || 3000;
 
 // Body parser
@@ -15,7 +15,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Session
 app.use(session({
-  store: new SQLiteStore({ db: 'sessions.db', dir: __dirname }),
+  store: new SQLiteStore({ db: 'sessions.db', dir: DATA_DIR }),
   secret: process.env.SESSION_SECRET || 'memories-secret-key-change-in-production',
   resave: false,
   saveUninitialized: false,
