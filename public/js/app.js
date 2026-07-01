@@ -274,7 +274,8 @@ async function renderMemories() {
             + '<h3>🔧 管理操作</h3>'
             + '<button class="btn btn-outline btn-sm" id="btnAddEvent">+ 添加活动</button> '
             + '<button class="btn btn-outline btn-sm" id="btnImportRoster">📋 导入名单</button> '
-            + '<button class="btn btn-outline btn-sm" id="btnViewInvites">🔑 查看邀请码</button>'
+            + '<button class="btn btn-outline btn-sm" id="btnViewInvites">🔑 查看邀请码</button> '
+            + '<button class="btn btn-outline btn-sm" id="btnExportCSV">📥 导出名单</button>'
             + '</div>';
     }
 
@@ -316,9 +317,11 @@ async function renderMemories() {
       const btnAdd = document.getElementById('btnAddEvent');
       const btnImport = document.getElementById('btnImportRoster');
       const btnInvites = document.getElementById('btnViewInvites');
+      const btnExport = document.getElementById('btnExportCSV');
       if (btnAdd) btnAdd.addEventListener('click', showAddEvent);
       if (btnImport) btnImport.addEventListener('click', showImportRoster);
       if (btnInvites) btnInvites.addEventListener('click', showInviteCodes);
+      if (btnExport) btnExport.addEventListener('click', () => { window.open('/api/admin/export', '_blank'); });
     }
   } catch(e) {
     el.innerHTML = '<p style="text-align:center;color:var(--red);padding:20px;">加载失败：'+esc(e.message)+'</p>';

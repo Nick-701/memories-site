@@ -60,6 +60,26 @@ router.get('/invites', requireAdmin, (req, res) => {
   }
 });
 
+// GET /api/admin/export — export all users as CSV
+router.get('/export', requireAdmin, (req, res) => {
+  try {
+    const users = userQueries.getInviteCodes.all();
+    const header = '姓名,班级,邀请码,是否注册,是否管理员';
+    const rows = users.map(u => {
+      const registered = u.password_hash ? '是' : '否';
+      const admin = u.is_admin ? '是' : '否';
+      return `"${u.name}","${u.class_name||''}","${u.invite_code}","${registered}","${admin}"`;
+    });
+    const csv = '﻿' + header + '\n' + rows.join('\n'); // BOM for Excel Chinese
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename=队员名单.csv');
+    res.send(csv);
+  } catch (err) {
+    console.error('Export error:', err);
+    res.status(500).json({ error: '导出失败' });
+  }
+});
+
 // DELETE /api/admin/users/:id — remove a user (admin only)
 router.delete('/users/:id', requireAdmin, (req, res) => {
   try {
