@@ -6,9 +6,14 @@ const { requireLogin } = require('../middleware/auth');
 
 const router = express.Router();
 
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..');
+const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
+const fs = require('fs');
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
 // Configure multer for photo uploads
 const storage = multer.diskStorage({
-  destination: path.join(__dirname, '..', 'public', 'uploads'),
+  destination: UPLOADS_DIR,
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
     cb(null, Date.now() + '-' + Math.round(Math.random() * 1e9) + ext);
@@ -86,8 +91,7 @@ router.delete('/:id', requireLogin, (req, res) => {
       return res.status(403).json({ error: '无权删除' });
     }
     // Delete file
-    const fs = require('fs');
-    const filePath = path.join(__dirname, '..', 'public', 'uploads', photo.filename);
+    const filePath = path.join(UPLOADS_DIR, photo.filename);
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     // Delete DB record
     photoQueries.delete.run(req.params.id);

@@ -7,6 +7,9 @@ const bcrypt = require('bcryptjs');
 const { db, userQueries } = require('./db/database');
 
 const DATA_DIR = process.env.DATA_DIR || __dirname;
+const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
+const fs = require('fs');
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 const PORT = process.env.PORT || 3000;
 
 const app = express();
@@ -27,7 +30,9 @@ app.use(session({
   }
 }));
 
-// Serve uploaded files
+// Serve uploaded files from persistent volume
+app.use('/uploads', express.static(UPLOADS_DIR));
+// Also check the old location as fallback (for legacy photos)
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 
 // Serve static frontend

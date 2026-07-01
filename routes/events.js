@@ -6,8 +6,13 @@ const { requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..');
+const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
+const fs = require('fs');
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
 const eventImageStorage = multer.diskStorage({
-  destination: path.join(__dirname, '..', 'public', 'uploads'),
+  destination: UPLOADS_DIR,
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
     cb(null, 'event-' + Date.now() + '-' + Math.round(Math.random() * 1e9) + ext);
