@@ -31,7 +31,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS photos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER,
-    category TEXT NOT NULL CHECK(category IN ('group','individual')),
+    category TEXT NOT NULL DEFAULT 'feed',
     filename TEXT NOT NULL,
     title TEXT DEFAULT '',
     description TEXT DEFAULT '',

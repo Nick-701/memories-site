@@ -49,23 +49,51 @@ router.get('/user/:userId', (req, res) => {
   }
 });
 
-// POST /api/photos — upload up to 9 photos (朋友圈风格)
-router.post('/', requireLogin, upload.array('photos', 9), (req, res) => {
-  try {
-    if (!req.files || req.files.length === 0) return res.status(400).json({ error: '请选择照片' });
-    const { title = '' } = req.body;
-    const postGroup = require('crypto').randomBytes(8).toString('hex');
-    const photos = [];
-    req.files.forEach(file => {
-      const result = photoQueries.create.run(req.user.id, 'feed', file.filename, title, '', postGroup);
-      photos.push(photoQueries.findById.get(result.lastInsertRowid));
-    });
-    res.json({ success: true, photos, postGroup });
-  } catch (err) {
-    console.error('Upload error:', err);
-    res.status(500).json({ error: '上传失败' });
+// POST /api/photos — upload up to 9 photos, or text-only post (朋友圈风格)
+router.post('/', requireLogin, (req, res, next) => {
+  // Check if there are files - if not, handle as text-only
+  const contentType = req.headers['content-type'] || '';
+  if (!contentType.includes('multipart/form-data')) {
+    return handleTextPost(req, res);
   }
+  upload.array('photos', 9)(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message });
+    // If no files but there's a title, treat as text-only
+    if ((!req.files || req.files.length === 0)) {
+      if (req.body.title && req.body.title.trim()) {
+        return handleTextPost(req, res);
+      }
+      return res.status(400).json({ error: '请选择照片或输入文字' });
+    }
+    try {
+      const { title = '' } = req.body;
+      const postGroup = require('crypto').randomBytes(8).toString('hex');
+      const photos = [];
+      req.files.forEach(file => {
+        const result = photoQueries.create.run(req.user.id, 'feed', file.filename, title, '', postGroup);
+        photos.push(photoQueries.findById.get(result.lastInsertRowid));
+      });
+      res.json({ success: true, photos, postGroup });
+    } catch (e) {
+      console.error('Upload error:', e);
+      res.status(500).json({ error: '上传失败' });
+    }
+  });
 });
+
+function handleTextPost(req, res) {
+  try {
+    const { title = '' } = req.body;
+    if (!title.trim()) return res.status(400).json({ error: '请输入内容' });
+    const postGroup = require('crypto').randomBytes(8).toString('hex');
+    const result = photoQueries.create.run(req.user.id, 'text', '', title, '', postGroup);
+    const photo = photoQueries.findById.get(result.lastInsertRowid);
+    res.json({ success: true, photos: [photo], postGroup, textOnly: true });
+  } catch (e) {
+    console.error('Text post error:', e);
+    res.status(500).json({ error: '发布失败' });
+  }
+}
 
 // DELETE /api/photos/:id
 router.delete('/:id', requireLogin, (req, res) => {

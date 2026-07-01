@@ -225,6 +225,9 @@ body {
   padding: 10px 14px; font-size: 0.9rem; color: var(--text);
   line-height: 1.6; word-break: break-word;
 }
+.feed-text-post {
+  font-size: 1.1rem; padding: 16px 18px; line-height: 1.8;
+}
 .feed-actions { padding: 0 10px; }
 .feed-empty {
   text-align: center; padding: 48px 20px; color: var(--text-light);

@@ -120,9 +120,14 @@ function makeFeedCard(group, photoList, startIdx) {
   const canDelete = currentUser && (currentUser.is_admin || currentUser.id === first.user_id);
   const count = group.length;
 
+  // Check if text-only
+  const isTextOnly = first.category === 'text' || !first.filename;
+
   // Photo grid
   let photosHtml = '';
-  if (count === 1) {
+  if (isTextOnly) {
+    photosHtml = ''; // No photo for text posts
+  } else if (count === 1) {
     photosHtml = '<div class="feed-photo feed-photo-1" data-idx="'+startIdx+'"><img src="/uploads/'+group[0].filename+'" loading="lazy"></div>';
   } else if (count === 2) {
     photosHtml = '<div class="feed-photo-grid feed-photo-2">';
@@ -145,7 +150,7 @@ function makeFeedCard(group, photoList, startIdx) {
         ${canDelete ? '<button class="feed-del" data-pgroup="'+esc(first.post_group||'')+'" title="删除">🗑</button>' : ''}
       </div>
       ${photosHtml}
-      ${first.title ? '<div class="feed-caption">'+esc(first.title)+'</div>' : ''}
+      ${first.title ? (isTextOnly ? '<div class="feed-caption feed-text-post">'+esc(first.title)+'</div>' : '<div class="feed-caption">'+esc(first.title)+'</div>') : ''}
       <div class="feed-actions">
         <div class="action-bar" id="action-photo-'+first.id+'"></div>
       </div>
@@ -321,16 +326,19 @@ function showFeedUpload() {
     e.preventDefault();
     e.stopPropagation();
     var files = fileInput.files;
-    if (!files || files.length === 0) { toast('请选择照片'); return false; }
+    var caption = this.querySelector('textarea[name="title"]').value.trim();
     if (files.length > 9) { toast('最多9张照片'); return false; }
     var fd = new FormData();
-    for (var i = 0; i < files.length; i++) { fd.append('photos', files[i]); }
-    fd.append('title', this.querySelector('textarea[name="title"]').value || '');
+    if (files.length > 0) {
+      for (var i = 0; i < files.length; i++) { fd.append('photos', files[i]); }
+    }
+    fd.append('title', caption);
+    if (files.length === 0 && !caption) { toast('请输入文字或选择照片'); return false; }
     try {
       var res = await fetch('/api/photos', { method:'POST', body:fd, credentials:'same-origin' });
       var data = await res.json();
       if (!res.ok) throw new Error(data.error||'发布失败');
-      toast('发布成功！('+files.length+'张)');
+      toast('发布成功！'+(data.textOnly?'纯文字':files.length+'张'));
       closeModal();
       renderMemories();
     } catch(err) { toast(err.message); }
