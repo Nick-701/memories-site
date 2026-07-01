@@ -112,32 +112,60 @@ async function loadComments(targetType, targetId, listEl) {
   } catch(e) { listEl.innerHTML = ''; }
 }
 
-// ==================== Feed Card (朋友圈风格) ====================
-function makeFeedCard(p, photoList, idx) {
-  const avatarUrl = p.avatar ? '/uploads/'+p.avatar+'?t='+p.user_id : '';
+// ==================== Feed Card (朋友圈风格, 支持9图) ====================
+function makeFeedCard(group, photoList, startIdx) {
+  const first = group[0];
+  const avatarUrl = first.avatar ? '/uploads/'+first.avatar+'?t='+first.user_id : '';
   const avatarHtml = avatarUrl ? '<img src="'+avatarUrl+'" class="feed-avatar">' : '<div class="feed-avatar" style="background:var(--gold-light);display:flex;align-items:center;justify-content:center;font-size:1.2rem;">👤</div>';
-  const canDelete = currentUser && (currentUser.is_admin || currentUser.id === p.user_id);
+  const canDelete = currentUser && (currentUser.is_admin || currentUser.id === first.user_id);
+  const count = group.length;
+
+  // Photo grid
+  let photosHtml = '';
+  if (count === 1) {
+    photosHtml = '<div class="feed-photo feed-photo-1" data-idx="'+startIdx+'"><img src="/uploads/'+group[0].filename+'" loading="lazy"></div>';
+  } else if (count === 2) {
+    photosHtml = '<div class="feed-photo-grid feed-photo-2">';
+    group.forEach((p,i) => { photosHtml += '<div class="feed-photo" data-idx="'+(startIdx+i)+'"><img src="/uploads/'+p.filename+'" loading="lazy"></div>'; });
+    photosHtml += '</div>';
+  } else {
+    photosHtml = '<div class="feed-photo-grid feed-photo-3">';
+    group.forEach((p,i) => { photosHtml += '<div class="feed-photo" data-idx="'+(startIdx+i)+'"><img src="/uploads/'+p.filename+'" loading="lazy"></div>'; });
+    photosHtml += '</div>';
+  }
 
   return `
-    <div class="feed-card">
+    <div class="feed-card" data-pgroup="${esc(first.post_group||'')}">
       <div class="feed-header">
         ${avatarHtml}
         <div class="feed-user-info">
-          <div class="feed-user-name">${esc(p.user_name||'未知')}${p.title?' <span class="feed-title-tag">'+esc(p.title)+'</span>':''}</div>
-          <div class="feed-time">${fmtTime(p.created_at)}</div>
+          <div class="feed-user-name">${esc(first.user_name||'未知')}${first.title?' <span class="feed-title-tag">'+esc(first.title)+'</span>':''}</div>
+          <div class="feed-time">${fmtTime(first.created_at)}</div>
         </div>
-        ${canDelete ? '<button class="feed-del" data-pid="'+p.id+'" title="删除">🗑</button>' : ''}
+        ${canDelete ? '<button class="feed-del" data-pgroup="'+esc(first.post_group||'')+'" title="删除">🗑</button>' : ''}
       </div>
-      <div class="feed-photo" data-idx="'+idx+'">
-        <img src="/uploads/'+p.filename+'" alt="" loading="lazy">
-      </div>
-      ${p.title ? '<div class="feed-caption">'+esc(p.title)+'</div>' : ''}
+      ${photosHtml}
+      ${first.title ? '<div class="feed-caption">'+esc(first.title)+'</div>' : ''}
       <div class="feed-actions">
-        <div class="action-bar" id="action-photo-'+p.id+'"></div>
+        <div class="action-bar" id="action-photo-'+first.id+'"></div>
       </div>
-      <div id="comments-photo-'+p.id+'"></div>
+      <div id="comments-photo-'+first.id+'"></div>
     </div>
   `;
+}
+
+// Group photos by post_group for feed display
+function groupPhotos(photos) {
+  const groups = [];
+  const seen = new Set();
+  photos.forEach(p => {
+    const key = p.post_group || ('_single_'+p.id);
+    if (seen.has(key)) return;
+    seen.add(key);
+    const group = photos.filter(x => (x.post_group||('_single_'+x.id)) === key);
+    groups.push(group);
+  });
+  return groups;
 }
 
 // ==================== PAGE: 主持记忆 (朋友圈Feed) ====================
@@ -159,12 +187,17 @@ async function renderMemories() {
 
     let html = '';
 
-    // Feed photos
+    // Feed photos — grouped by post_group
     if (photos.length === 0) {
       html += '<div class="feed-empty">📷<p>还没有动态，快来发第一条吧~</p></div>';
     } else {
+      const groups = groupPhotos(photos);
       const photoList = photos.map(p => ({ src: '/uploads/'+p.filename, title: p.title }));
-      photos.forEach((p, i) => { html += makeFeedCard(p, photoList, i); });
+      let idx = 0;
+      groups.forEach(group => {
+        html += makeFeedCard(group, photoList, idx);
+        idx += group.length;
+      });
     }
 
     // Events section
@@ -204,17 +237,29 @@ async function renderMemories() {
       });
     }
 
-    // Delete buttons
+    // Delete buttons — delete all photos in the post group
     el.querySelectorAll('.feed-del').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
         if (!confirm('确定删除这条动态吗？')) return;
-        try { await API.deletePhoto(btn.dataset.pid); toast('已删除'); renderMemories(); } catch(err) { toast(err.message); }
+        const pgroup = btn.dataset.pgroup;
+        try {
+          // Delete all photos in this group
+          const groupPhotos = photos.filter(p => (p.post_group||('_single_'+p.id)) === pgroup);
+          for (const p of groupPhotos) {
+            await API.deletePhoto(p.id);
+          }
+          toast('已删除'); renderMemories();
+        } catch(err) { toast(err.message); }
       });
     });
 
-    // Like + comment per photo
+    // Like + comment on first photo of each group
+    const doneGroups = new Set();
     photos.forEach(p => {
+      const key = p.post_group || ('_single_'+p.id);
+      if (doneGroups.has(key)) return;
+      doneGroups.add(key);
       const a = document.getElementById('action-photo-'+p.id);
       if (a) a.appendChild(makeLikeBtn('photo', p.id));
       const c = document.getElementById('comments-photo-'+p.id);
@@ -243,20 +288,49 @@ async function renderMemories() {
   }
 }
 
-// ==================== Feed Upload (朋友圈发照片) ====================
+// ==================== Feed Upload (9图朋友圈) ====================
 function showFeedUpload() {
   showModal(`
     <h2>📷 发动态</h2>
+    <p style="font-size:0.8rem;color:var(--text-light);margin-bottom:8px;">最多选择9张照片</p>
     <form id="feedUploadForm">
-      <div class="form-group"><label>选择照片*</label><input type="file" name="photo" accept="image/*" required></div>
+      <div class="form-group"><label>选择照片（1-9张）</label><input type="file" name="photos" accept="image/*" multiple id="feedFileInput"></div>
+      <div id="feedPreview" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;"></div>
       <div class="form-group"><label>说点什么...（支持emoji）</label><textarea name="title" rows="3" placeholder="这一刻的想法... 😊🎭✨"></textarea></div>
       <button type="submit" class="btn btn-primary" style="width:100%;">发布</button>
     </form>
   `);
+  const fileInput = document.getElementById('feedFileInput');
+  const preview = document.getElementById('feedPreview');
+  fileInput.addEventListener('change', () => {
+    preview.innerHTML = '';
+    const files = Array.from(fileInput.files).slice(0, 9);
+    files.forEach((file, i) => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const div = document.createElement('div');
+        div.style.cssText = 'width:60px;height:60px;border-radius:6px;overflow:hidden;position:relative;';
+        div.innerHTML = '<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover;">'
+          + '<span style="position:absolute;top:2px;right:4px;color:#fff;font-size:0.7rem;text-shadow:0 1px 2px rgba(0,0,0,0.5);">'+(i+1)+'/'+files.length+'</span>';
+        preview.appendChild(div);
+      };
+      reader.readAsDataURL(file);
+    });
+  });
   document.getElementById('feedUploadForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+    const files = fileInput.files;
+    if (files.length === 0) { toast('请选择照片'); return; }
+    if (files.length > 9) { toast('最多9张照片'); return; }
     const fd = new FormData(e.target);
-    try { await API.uploadPhoto(fd); toast('发布成功！'); closeModal(); renderMemories(); } catch(err) { toast(err.message); }
+    try {
+      const res = await fetch('/api/photos', { method:'POST', body:fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error||'发布失败');
+      toast('发布成功！('+files.length+'张)');
+      closeModal();
+      renderMemories();
+    } catch(err) { toast(err.message); }
   });
 }
 

@@ -49,14 +49,18 @@ router.get('/user/:userId', (req, res) => {
   }
 });
 
-// POST /api/photos — anyone can upload (like 朋友圈)
-router.post('/', requireLogin, upload.single('photo'), (req, res) => {
+// POST /api/photos — upload up to 9 photos (朋友圈风格)
+router.post('/', requireLogin, upload.array('photos', 9), (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: '请选择照片' });
+    if (!req.files || req.files.length === 0) return res.status(400).json({ error: '请选择照片' });
     const { title = '' } = req.body;
-    const result = photoQueries.create.run(req.user.id, 'feed', req.file.filename, title, '');
-    const photo = photoQueries.findById.get(result.lastInsertRowid);
-    res.json({ success: true, photo });
+    const postGroup = require('crypto').randomBytes(8).toString('hex');
+    const photos = [];
+    req.files.forEach(file => {
+      const result = photoQueries.create.run(req.user.id, 'feed', file.filename, title, '', postGroup);
+      photos.push(photoQueries.findById.get(result.lastInsertRowid));
+    });
+    res.json({ success: true, photos, postGroup });
   } catch (err) {
     console.error('Upload error:', err);
     res.status(500).json({ error: '上传失败' });

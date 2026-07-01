@@ -35,6 +35,7 @@ db.exec(`
     filename TEXT NOT NULL,
     title TEXT DEFAULT '',
     description TEXT DEFAULT '',
+    post_group TEXT DEFAULT '',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
@@ -72,6 +73,7 @@ db.exec(`
 
 // Safe migration: add columns if missing (won't error if column exists)
 try { db.exec('ALTER TABLE users ADD COLUMN title TEXT DEFAULT \'\''); } catch(e) {}
+try { db.exec('ALTER TABLE photos ADD COLUMN post_group TEXT DEFAULT \'\''); } catch(e) {}
 
 // ======================== User Queries ========================
 const userQueries = {
@@ -105,7 +107,7 @@ const photoQueries = {
     WHERE p.user_id = ? ORDER BY p.created_at DESC
   `),
   findById: db.prepare('SELECT p.*, u.name as user_name, u.avatar, u.title FROM photos p LEFT JOIN users u ON p.user_id = u.id WHERE p.id = ?'),
-  create: db.prepare('INSERT INTO photos (user_id, category, filename, title, description) VALUES (?, ?, ?, ?, ?)'),
+  create: db.prepare('INSERT INTO photos (user_id, category, filename, title, description, post_group) VALUES (?, ?, ?, ?, ?, ?)'),
   delete: db.prepare('DELETE FROM photos WHERE id = ?'),
 };
 

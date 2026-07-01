@@ -212,7 +212,15 @@ body {
 }
 .feed-del:hover { color: var(--red); }
 .feed-photo { cursor: pointer; }
-.feed-photo img { width: 100%; display: block; }
+.feed-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.feed-photo-1 img { max-height: 400px; object-fit: contain; background: #f0f0f0; }
+
+/* Multi-photo grids */
+.feed-photo-grid { display: grid; gap: 2px; }
+.feed-photo-grid.feed-photo-2 { grid-template-columns: repeat(2, 1fr); }
+.feed-photo-grid.feed-photo-2 .feed-photo { aspect-ratio: 1; }
+.feed-photo-grid.feed-photo-3 { grid-template-columns: repeat(3, 1fr); }
+.feed-photo-grid.feed-photo-3 .feed-photo { aspect-ratio: 1; }
 .feed-caption {
   padding: 10px 14px; font-size: 0.9rem; color: var(--text);
   line-height: 1.6; word-break: break-word;
