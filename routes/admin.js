@@ -1,7 +1,9 @@
 const express = require('express');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const { db, userQueries } = require('../db/database');
 const { requireAdmin } = require('../middleware/auth');
+
+function shortCode() { return crypto.randomBytes(4).toString('hex'); }
 
 const router = express.Router();
 
@@ -35,7 +37,7 @@ router.post('/import', requireAdmin, (req, res) => {
           results.push({ name, className, inviteCode: existing.invite_code, skipped: true });
           continue;
         }
-        const code = uuidv4().slice(0, 8);
+        const code = shortCode();
         insert.run(name, code, className);
         results.push({ name, className, inviteCode: code, skipped: false });
       }
