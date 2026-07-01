@@ -90,21 +90,21 @@ const userQueries = {
 // ======================== Photo Queries ========================
 const photoQueries = {
   findAll: db.prepare(`
-    SELECT p.*, u.name as user_name FROM photos p
+    SELECT p.*, u.name as user_name, u.avatar, u.title FROM photos p
     LEFT JOIN users u ON p.user_id = u.id
     ORDER BY p.created_at DESC
   `),
   findByCategory: db.prepare(`
-    SELECT p.*, u.name as user_name FROM photos p
+    SELECT p.*, u.name as user_name, u.avatar, u.title FROM photos p
     LEFT JOIN users u ON p.user_id = u.id
     WHERE p.category = ? ORDER BY p.created_at DESC
   `),
   findByUser: db.prepare(`
-    SELECT p.*, u.name as user_name FROM photos p
+    SELECT p.*, u.name as user_name, u.avatar, u.title FROM photos p
     LEFT JOIN users u ON p.user_id = u.id
     WHERE p.user_id = ? ORDER BY p.created_at DESC
   `),
-  findById: db.prepare('SELECT p.*, u.name as user_name FROM photos p LEFT JOIN users u ON p.user_id = u.id WHERE p.id = ?'),
+  findById: db.prepare('SELECT p.*, u.name as user_name, u.avatar, u.title FROM photos p LEFT JOIN users u ON p.user_id = u.id WHERE p.id = ?'),
   create: db.prepare('INSERT INTO photos (user_id, category, filename, title, description) VALUES (?, ?, ?, ?, ?)'),
   delete: db.prepare('DELETE FROM photos WHERE id = ?'),
 };

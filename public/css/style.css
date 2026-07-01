@@ -186,6 +186,44 @@ body {
 .event-card .event-meta { font-size: 0.8rem; color: var(--text-light); margin-bottom: 4px; }
 .event-card .event-desc { font-size: 0.85rem; color: var(--text-light); line-height: 1.6; }
 
+/* ===== Feed Cards (朋友圈风格) ===== */
+.feed-card {
+  background: var(--white); border-radius: var(--radius); margin-bottom: 16px;
+  box-shadow: 0 1px 6px var(--shadow); overflow: hidden;
+}
+.feed-header {
+  display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+}
+.feed-avatar {
+  width: 42px; height: 42px; border-radius: 50%; object-fit: cover;
+  border: 2px solid var(--gold-light); flex-shrink: 0;
+}
+.feed-user-info { flex: 1; min-width: 0; }
+.feed-user-name { font-weight: 700; font-size: 0.9rem; color: var(--text); }
+.feed-time { font-size: 0.72rem; color: #bbb; margin-top: 2px; }
+.feed-title-tag {
+  display: inline-block; padding: 1px 8px; background: var(--brown);
+  color: #fff; border-radius: 10px; font-size: 0.65rem; font-weight: 500;
+  vertical-align: middle; margin-left: 4px;
+}
+.feed-del {
+  background: none; border: none; font-size: 1rem; cursor: pointer;
+  color: #ccc; padding: 6px; min-width: 36px; min-height: 36px;
+}
+.feed-del:hover { color: var(--red); }
+.feed-photo { cursor: pointer; }
+.feed-photo img { width: 100%; display: block; }
+.feed-caption {
+  padding: 10px 14px; font-size: 0.9rem; color: var(--text);
+  line-height: 1.6; word-break: break-word;
+}
+.feed-actions { padding: 0 10px; }
+.feed-empty {
+  text-align: center; padding: 48px 20px; color: var(--text-light);
+}
+.feed-empty p { margin-top: 8px; font-size: 0.9rem; }
+.feed-empty .icon { font-size: 3rem; }
+
 /* ===== My Page ===== */
 .my-login-prompt { text-align: center; padding: 48px 20px; }
 .my-login-prompt p { margin-bottom: 20px; color: var(--text-light); font-size: 0.95rem; }
@@ -332,7 +370,7 @@ body {
   html { font-size: 16px; }
   body {
     padding-bottom: calc(var(--nav-height) + 32px);
-    max-width: 900px; margin: 0 auto;
+    max-width: 640px; margin: 0 auto;
   }
   .page { padding: 20px 20px 0; max-width: 860px; margin: 0 auto; }
   .page-header h1 { font-size: 2rem; }
