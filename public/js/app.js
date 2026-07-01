@@ -317,20 +317,24 @@ function showFeedUpload() {
       reader.readAsDataURL(file);
     });
   });
-  document.getElementById('feedUploadForm').addEventListener('submit', async (e) => {
+  document.getElementById('feedUploadForm').addEventListener('submit', async function(e) {
     e.preventDefault();
-    const files = fileInput.files;
-    if (files.length === 0) { toast('请选择照片'); return; }
-    if (files.length > 9) { toast('最多9张照片'); return; }
-    const fd = new FormData(e.target);
+    e.stopPropagation();
+    var files = fileInput.files;
+    if (!files || files.length === 0) { toast('请选择照片'); return false; }
+    if (files.length > 9) { toast('最多9张照片'); return false; }
+    var fd = new FormData();
+    for (var i = 0; i < files.length; i++) { fd.append('photos', files[i]); }
+    fd.append('title', this.querySelector('textarea[name="title"]').value || '');
     try {
-      const res = await fetch('/api/photos', { method:'POST', body:fd });
-      const data = await res.json();
+      var res = await fetch('/api/photos', { method:'POST', body:fd, credentials:'same-origin' });
+      var data = await res.json();
       if (!res.ok) throw new Error(data.error||'发布失败');
       toast('发布成功！('+files.length+'张)');
       closeModal();
       renderMemories();
     } catch(err) { toast(err.message); }
+    return false;
   });
 }
 
