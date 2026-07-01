@@ -257,6 +257,7 @@ async function renderMemories() {
       events.forEach(ev => {
         html += '<div class="event-card" id="event-'+ev.id+'">'
               + '<span class="event-year">'+esc(ev.date.slice(0,4))+'</span>'
+              + (ev.image ? '<img src="/uploads/'+ev.image+'" alt="'+esc(ev.title)+'" style="width:100%;max-height:300px;object-fit:cover;border-radius:8px;margin:8px 0;">' : '')
               + '<div class="event-title">'+esc(ev.title)+'</div>'
               + '<div class="event-meta">📅 '+esc(ev.date)+(ev.location?'  📍 '+esc(ev.location):'')+'</div>'
               + '<div class="event-desc">'+esc(ev.description||'')+'</div>'
@@ -348,11 +349,12 @@ function showMemoriesUpload() {
 function showAddEvent() {
   showModal(`
     <h2>📅 添加活动</h2>
-    <form id="eventForm">
+    <form id="eventForm" enctype="multipart/form-data">
       <div class="form-group"><label>活动标题*</label><input type="text" name="title" required></div>
       <div class="form-group"><label>日期*</label><input type="date" name="date" required></div>
       <div class="form-group"><label>地点</label><input type="text" name="location"></div>
       <div class="form-group"><label>描述</label><textarea name="description" rows="2"></textarea></div>
+      <div class="form-group"><label>配图（可选）</label><input type="file" name="image" accept="image/*"></div>
       <button type="submit" class="btn btn-primary" style="width:100%;">添加</button>
     </form>
   `);
@@ -360,7 +362,9 @@ function showAddEvent() {
     e.preventDefault();
     const fd = new FormData(e.target);
     try {
-      await API.createEvent(Object.fromEntries(fd.entries()));
+      const res = await fetch('/api/events', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error||'添加失败');
       toast('活动已添加！');
       closeModal();
       renderMemories();
@@ -371,9 +375,9 @@ function showAddEvent() {
 function showImportRoster() {
   showModal(`
     <h2>📋 导入队员名单</h2>
-    <p style="font-size:0.85rem;color:var(--text-light);margin-bottom:12px;">每行一个姓名，或用逗号分隔</p>
+    <p style="font-size:0.85rem;color:var(--text-light);margin-bottom:12px;">每行一个队员，格式：<b>姓名 班级</b>（空格分隔）</p>
     <form id="importForm">
-      <div class="form-group"><textarea name="names" rows="6" placeholder="张三&#10;李四&#10;王五&#10;..."></textarea></div>
+      <div class="form-group"><textarea name="names" rows="6" placeholder="张三 计算机2201&#10;李四 软件2202&#10;王五 通信2203&#10;..."></textarea></div>
       <button type="submit" class="btn btn-primary" style="width:100%;">导入并生成邀请码</button>
     </form>
     <div id="importResults" style="margin-top:12px;"></div>
@@ -384,7 +388,7 @@ function showImportRoster() {
     try {
       const r = await API.importRoster(names);
       const html = r.results.map(x =>
-        '<div class="invite-item"><span>'+esc(x.name)+(x.skipped?' (已存在)':'')+'</span><span class="invite-code">'+x.inviteCode+'</span></div>'
+        '<div class="invite-item"><span>'+esc(x.name)+(x.className?' ('+esc(x.className)+')':'')+(x.skipped?' (已存在)':'')+'</span><span class="invite-code">'+x.inviteCode+'</span></div>'
       ).join('');
       document.getElementById('importResults').innerHTML = '<p style="color:green;margin-bottom:8px;">✅ 导入完成！以下是邀请码：</p>' + html;
       toast('导入成功！');
@@ -396,7 +400,7 @@ async function showInviteCodes() {
   try {
     const r = await API.getInvites();
     const html = r.users.map(u =>
-      '<div class="invite-item"><span>'+esc(u.name)+(u.is_admin?' 👑':'')+'</span><span class="invite-code">'+(u.password_hash?'✅ 已注册':'🔑 '+u.invite_code)+'</span></div>'
+      '<div class="invite-item"><span>'+esc(u.name)+(u.class_name?' ('+esc(u.class_name)+')':'')+(u.is_admin?' 👑':'')+'</span><span class="invite-code">'+(u.password_hash?'✅ 已注册':'🔑 '+u.invite_code)+'</span></div>'
     ).join('');
     showModal('<h2>🔑 邀请码列表</h2><div class="invite-list">'+html+'</div>');
   } catch(err) { toast(err.message); }
@@ -416,6 +420,7 @@ async function renderMembers() {
       html += '<div class="member-card" data-id="'+m.id+'">'
             + '<img class="member-avatar" src="'+avatarSrc+'" alt="'+esc(m.name)+'" loading="lazy">'
             + '<div class="member-name">'+esc(m.name)+'</div>'
+            + (m.class_name ? '<div class="member-class" style="font-size:0.75rem;color:var(--gold);margin-bottom:2px;">📚 '+esc(m.class_name)+'</div>' : '')
             + '<div class="member-bio">'+esc(m.bio||'这个人很懒，还没写介绍...')+'</div>'
             + '</div>';
     });
@@ -446,6 +451,7 @@ async function showMemberDetail(memberId) {
     let html = '<div style="text-align:center;">';
     if (avatarSrc) html += '<img src="'+avatarSrc+'" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--gold-light);margin-bottom:8px;">';
     html += '<h2 style="color:var(--brown);">'+esc(m.name)+'</h2>';
+    if (m.class_name) html += '<p style="color:var(--gold);font-size:0.9rem;margin-bottom:4px;">📚 '+esc(m.class_name)+'</p>';
     html += '<p style="color:var(--text-light);margin-bottom:8px;">'+esc(m.bio||'暂无介绍')+'</p>';
     html += '<div class="action-bar" style="justify-content:center;" id="action-member-'+m.id+'"></div>';
     html += '<div id="comments-member-'+m.id+'"></div>';

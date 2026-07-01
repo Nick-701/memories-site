@@ -53,10 +53,10 @@ function ensureAdmin() {
   if (count === 0) {
     const adminCode = process.env.ADMIN_INVITE_CODE || 'admin2024';
     const hash = bcrypt.hashSync('admin123', 10);
-    userQueries.create.run('管理员', adminCode, hash, 1);
+    userQueries.create.run('主持与戏剧表演队', adminCode, hash, 1, '');
     console.log('========================================');
     console.log('  默认管理员已创建:');
-    console.log('  姓名: 管理员');
+    console.log('  姓名: 主持与戏剧表演队');
     console.log('  邀请码: ' + adminCode);
     console.log('  密码: admin123');
     console.log('  请尽快登录修改密码！');

@@ -1,8 +1,26 @@
 const express = require('express');
+const multer = require('multer');
+const path = require('path');
 const { eventQueries } = require('../db/database');
 const { requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
+
+const eventImageStorage = multer.diskStorage({
+  destination: path.join(__dirname, '..', 'public', 'uploads'),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, 'event-' + Date.now() + '-' + Math.round(Math.random() * 1e9) + ext);
+  }
+});
+const eventImageUpload = multer({
+  storage: eventImageStorage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = /\.(jpg|jpeg|png|gif|webp)$/i;
+    cb(null, allowed.test(path.extname(file.originalname)));
+  }
+});
 
 // GET /api/events
 router.get('/', (req, res) => {
@@ -15,14 +33,15 @@ router.get('/', (req, res) => {
   }
 });
 
-// POST /api/events (admin only)
-router.post('/', requireAdmin, (req, res) => {
+// POST /api/events (admin only, supports image upload)
+router.post('/', requireAdmin, eventImageUpload.single('image'), (req, res) => {
   try {
     const { title, date, location = '', description = '' } = req.body;
     if (!title || !date) {
       return res.status(400).json({ error: '请填写活动标题和日期' });
     }
-    const result = eventQueries.create.run(title, date, location, description);
+    const image = req.file ? req.file.filename : '';
+    const result = eventQueries.create.run(title, date, location, description, image);
     const event = eventQueries.findById.get(result.lastInsertRowid);
     res.json({ success: true, event });
   } catch (err) {

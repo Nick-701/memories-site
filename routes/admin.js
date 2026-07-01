@@ -5,36 +5,42 @@ const { requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
-// POST /api/admin/import — import roster
+// POST /api/admin/import — import roster (format: "姓名 班级" per line, or "姓名,班级")
 router.post('/import', requireAdmin, (req, res) => {
   try {
-    const { names } = req.body; // array of strings or comma-separated string
-    let nameList = [];
-    if (Array.isArray(names)) {
-      nameList = names.map(n => n.trim()).filter(Boolean);
-    } else if (typeof names === 'string') {
-      nameList = names.split(/[,，\n]+/).map(n => n.trim()).filter(Boolean);
-    }
-    if (!nameList.length) {
-      return res.status(400).json({ error: '请提供名单（姓名列表，逗号或换行分隔）' });
+    const { names } = req.body; // multi-line string, each line: "姓名 班级" or "姓名,班级"
+    if (!names || typeof names !== 'string' || !names.trim()) {
+      return res.status(400).json({ error: '请提供名单（每行：姓名 班级）' });
     }
 
-    const insert = db.prepare('INSERT INTO users (name, invite_code, is_admin) VALUES (?, ?, 0)');
+    const lines = names.split(/[\n]+/).map(l => l.trim()).filter(Boolean);
+    const entries = lines.map(line => {
+      // Split by space, comma, or Chinese comma
+      const parts = line.split(/[ ,，]+/);
+      const name = parts[0]?.trim();
+      const className = parts.slice(1).join(' ')?.trim() || '';
+      return { name, className };
+    }).filter(e => e.name);
+
+    if (!entries.length) {
+      return res.status(400).json({ error: '未能解析出有效姓名' });
+    }
+
+    const insert = db.prepare('INSERT INTO users (name, invite_code, is_admin, class_name) VALUES (?, ?, 0, ?)');
     const results = [];
-    const insertMany = db.transaction((names) => {
-      for (const name of names) {
-        // Skip if already exists
+    const insertMany = db.transaction((entries) => {
+      for (const { name, className } of entries) {
         const existing = userQueries.findByName.get(name);
         if (existing) {
-          results.push({ name, inviteCode: existing.invite_code, skipped: true });
+          results.push({ name, className, inviteCode: existing.invite_code, skipped: true });
           continue;
         }
-        const code = uuidv4().slice(0, 8); // Short invite code
-        insert.run(name, code);
-        results.push({ name, inviteCode: code, skipped: false });
+        const code = uuidv4().slice(0, 8);
+        insert.run(name, code, className);
+        results.push({ name, className, inviteCode: code, skipped: false });
       }
     });
-    insertMany(nameList);
+    insertMany(entries);
 
     res.json({ success: true, results });
   } catch (err) {
