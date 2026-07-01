@@ -9,6 +9,8 @@ const { db, userQueries } = require('./db/database');
 const DATA_DIR = process.env.DATA_DIR || __dirname;
 const PORT = process.env.PORT || 3000;
 
+const app = express();
+
 // Body parser
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
