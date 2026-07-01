@@ -55,7 +55,7 @@ function ensureAdmin() {
   if (count === 0) {
     const adminCode = process.env.ADMIN_INVITE_CODE || 'admin2024';
     const hash = bcrypt.hashSync('admin123', 10);
-    userQueries.create.run('主持与戏剧表演队', adminCode, hash, 1, '');
+    userQueries.create.run('主持与戏剧表演队', adminCode, hash, 1, '', '队长');
     console.log('========================================');
     console.log('  默认管理员已创建:');
     console.log('  姓名: 主持与戏剧表演队');

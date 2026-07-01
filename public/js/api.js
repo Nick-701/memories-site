@@ -52,5 +52,6 @@ const API = {
   // Admin
   importRoster:  (names)    => API.request('POST', '/api/admin/import', { names }),
   getInvites:    ()         => API.request('GET', '/api/admin/invites'),
+  setTitle:      (id,title) => API.request('PUT', '/api/admin/users/'+id+'/title', { title }),
   deleteUser:    (id)       => API.request('DELETE', '/api/admin/users/' + id),
 };

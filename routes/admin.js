@@ -62,26 +62,20 @@ router.get('/invites', requireAdmin, (req, res) => {
   }
 });
 
-// GET /api/admin/export — export all users as .xls (HTML table format, Excel compatible)
-router.get('/export', requireAdmin, (req, res) => {
+// PUT /api/admin/users/:id/title — set member title (admin only)
+router.put('/users/:id/title', requireAdmin, (req, res) => {
   try {
-    const users = userQueries.getInviteCodes.all();
-    const rows = users.map(u => {
-      const registered = u.password_hash ? '是' : '否';
-      const admin = u.is_admin ? '是' : '否';
-      return `<tr><td>${escXls(u.name)}</td><td>${escXls(u.class_name||'')}</td><td>${escXls(u.invite_code)}</td><td>${registered}</td><td>${admin}</td></tr>`;
-    }).join('');
-    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>队员名单</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body><table border="1"><tr><th>姓名</th><th>班级</th><th>邀请码</th><th>是否注册</th><th>是否管理员</th></tr>${rows}</table></body></html>`;
-    res.setHeader('Content-Type', 'application/vnd.ms-excel; charset=utf-8');
-    res.setHeader('Content-Disposition', 'attachment; filename=队员名单.xls');
-    res.send(html);
+    const user = userQueries.findById.get(req.params.id);
+    if (!user) return res.status(404).json({ error: '用户不存在' });
+    const { title } = req.body;
+    userQueries.updateTitle.run(title || '', req.params.id);
+    const updated = userQueries.findById.get(req.params.id);
+    res.json({ success: true, user: updated });
   } catch (err) {
-    console.error('Export error:', err);
-    res.status(500).json({ error: '导出失败' });
+    console.error('Update title error:', err);
+    res.status(500).json({ error: '设置失败' });
   }
 });
-
-function escXls(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 // DELETE /api/admin/users/:id — remove a user (admin only)
 router.delete('/users/:id', requireAdmin, (req, res) => {

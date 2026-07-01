@@ -24,6 +24,7 @@ db.exec(`
     bio TEXT DEFAULT '',
     avatar TEXT DEFAULT '',
     class_name TEXT DEFAULT '',
+    title TEXT DEFAULT '',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -69,16 +70,20 @@ db.exec(`
   );
 `);
 
+// Safe migration: add columns if missing (won't error if column exists)
+try { db.exec('ALTER TABLE users ADD COLUMN title TEXT DEFAULT \'\''); } catch(e) {}
+
 // ======================== User Queries ========================
 const userQueries = {
   findByInviteCode: db.prepare('SELECT * FROM users WHERE invite_code = ?'),
-  findById: db.prepare('SELECT id, name, is_admin, bio, avatar, class_name, invite_code, created_at FROM users WHERE id = ?'),
+  findById: db.prepare('SELECT id, name, is_admin, bio, avatar, class_name, title, invite_code, created_at FROM users WHERE id = ?'),
   findByName: db.prepare('SELECT * FROM users WHERE name = ?'),
-  findAll: db.prepare('SELECT id, name, is_admin, bio, avatar, class_name, created_at FROM users ORDER BY id'),
-  create: db.prepare('INSERT INTO users (name, invite_code, password_hash, is_admin, class_name) VALUES (?, ?, ?, ?, ?)'),
+  findAll: db.prepare('SELECT id, name, is_admin, bio, avatar, class_name, title, created_at FROM users ORDER BY id'),
+  create: db.prepare('INSERT INTO users (name, invite_code, password_hash, is_admin, class_name, title) VALUES (?, ?, ?, ?, ?, ?)'),
   updateProfile: db.prepare('UPDATE users SET bio = ?, avatar = ? WHERE id = ?'),
+  updateTitle: db.prepare('UPDATE users SET title = ? WHERE id = ?'),
   updatePassword: db.prepare('UPDATE users SET password_hash = ? WHERE id = ?'),
-  getInviteCodes: db.prepare('SELECT id, name, class_name, invite_code, is_admin FROM users ORDER BY id'),
+  getInviteCodes: db.prepare('SELECT id, name, class_name, title, invite_code, is_admin, password_hash FROM users ORDER BY id'),
   countAdmins: db.prepare('SELECT COUNT(*) as count FROM users WHERE is_admin = 1'),
 };
 

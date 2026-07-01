@@ -274,8 +274,7 @@ async function renderMemories() {
             + '<h3>🔧 管理操作</h3>'
             + '<button class="btn btn-outline btn-sm" id="btnAddEvent">+ 添加活动</button> '
             + '<button class="btn btn-outline btn-sm" id="btnImportRoster">📋 导入名单</button> '
-            + '<button class="btn btn-outline btn-sm" id="btnViewInvites">🔑 查看邀请码</button> '
-            + '<button class="btn btn-outline btn-sm" id="btnExportCSV">📥 导出名单</button>'
+            + '<button class="btn btn-outline btn-sm" id="btnViewInvites">🔑 查看邀请码</button>'
             + '</div>';
     }
 
@@ -317,11 +316,9 @@ async function renderMemories() {
       const btnAdd = document.getElementById('btnAddEvent');
       const btnImport = document.getElementById('btnImportRoster');
       const btnInvites = document.getElementById('btnViewInvites');
-      const btnExport = document.getElementById('btnExportCSV');
       if (btnAdd) btnAdd.addEventListener('click', showAddEvent);
       if (btnImport) btnImport.addEventListener('click', showImportRoster);
       if (btnInvites) btnInvites.addEventListener('click', showInviteCodes);
-      if (btnExport) btnExport.addEventListener('click', () => { window.open('/api/admin/export', '_blank'); });
     }
   } catch(e) {
     el.innerHTML = '<p style="text-align:center;color:var(--red);padding:20px;">加载失败：'+esc(e.message)+'</p>';
@@ -402,10 +399,44 @@ function showImportRoster() {
 async function showInviteCodes() {
   try {
     const r = await API.getInvites();
+    const lines = [];
+    r.users.forEach(u => {
+      const status = u.password_hash ? '✅已激活' : '⏳未激活';
+      const code = u.password_hash ? '' : u.invite_code;
+      const title = u.title || '';
+      if (!u.is_admin) lines.push(u.name + '  ' + (u.class_name||'') + '  ' + code + '  ' + status + (title?'  '+title:''));
+    });
+    const copyText = lines.join('\n');
+
     const html = r.users.map(u =>
-      '<div class="invite-item"><span>'+esc(u.name)+(u.class_name?' ('+esc(u.class_name)+')':'')+(u.is_admin?' 👑':'')+'</span><span class="invite-code">'+(u.password_hash?'✅ 已注册':'🔑 '+u.invite_code)+'</span></div>'
+      '<div class="invite-item" style="flex-wrap:wrap;gap:6px;">'
+      + '<div style="flex:1;min-width:120px;">'
+      + '<span>'+esc(u.name)+(u.class_name?' <span style="color:var(--gold);font-size:0.78rem;">'+esc(u.class_name)+'</span>':'')+(u.is_admin?' 👑':'')+'</span>'
+      + (u.title ? ' <span style="background:var(--brown);color:#fff;padding:1px 8px;border-radius:10px;font-size:0.7rem;">'+esc(u.title)+'</span>' : '')
+      + '<br><span class="invite-code" style="'+(u.password_hash?'color:#4a8;':'')+'">'+(u.password_hash?'✅ 已激活':'🔑 '+u.invite_code)+'</span>'
+      + '</div>'
+      + (u.is_admin ? '' : '<div style="display:flex;align-items:center;gap:4px;"><input class="title-input" data-uid="'+u.id+'" value="'+esc(u.title||'')+'" placeholder="头衔" style="width:80px;padding:4px 8px;border:1px solid var(--gold-light);border-radius:12px;font-size:0.78rem;text-align:center;"><button class="btn btn-primary btn-sm title-save" data-uid="'+u.id+'" style="font-size:0.7rem;padding:4px 8px;">设</button></div>')
+      + '</div>'
     ).join('');
-    showModal('<h2>🔑 邀请码列表</h2><div class="invite-list">'+html+'</div>');
+    showModal('<h2>🔑 邀请码列表</h2><p style="font-size:0.8rem;color:var(--text-light);margin-bottom:8px;">设置头衔 + 查看激活状态。点击下方按钮一键复制所有信息。</p><button class="btn btn-outline btn-sm" id="btnCopyInvites" style="margin-bottom:12px;width:100%;">📋 一键复制邀请码信息</button><div class="invite-list">'+html+'</div>');
+    // Title save buttons
+    document.querySelectorAll('.title-save').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const uid = btn.dataset.uid;
+        const input = document.querySelector('.title-input[data-uid="'+uid+'"]');
+        try {
+          await API.setTitle(uid, input.value.trim());
+          toast('头衔已设置！');
+        } catch(err) { toast(err.message); }
+      });
+    });
+    // Copy all button
+    const btnCopy = document.getElementById('btnCopyInvites');
+    if (btnCopy) {
+      btnCopy.addEventListener('click', () => {
+        navigator.clipboard.writeText(copyText).then(() => toast('已复制 '+lines.length+' 条邀请信息！')).catch(() => toast('复制失败，请手动选择'));
+      });
+    }
   } catch(err) { toast(err.message); }
 }
 
@@ -422,7 +453,7 @@ async function renderMembers() {
       const avatarSrc = m.avatar ? '/uploads/'+m.avatar+'?t='+m.id : 'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60"><rect fill="#E8D5B7" width="60" height="60" rx="30"/><text x="30" y="38" text-anchor="middle" font-size="24">👤</text></svg>');
       html += '<div class="member-card" data-id="'+m.id+'">'
             + '<img class="member-avatar" src="'+avatarSrc+'" alt="'+esc(m.name)+'" loading="lazy">'
-            + '<div class="member-name">'+esc(m.name)+'</div>'
+            + '<div class="member-name">'+esc(m.name)+(m.title?' <span style="font-size:0.7rem;background:var(--brown);color:#fff;padding:2px 8px;border-radius:10px;">'+esc(m.title)+'</span>':'')+'</div>'
             + (m.class_name ? '<div class="member-class" style="font-size:0.75rem;color:var(--gold);margin-bottom:2px;">📚 '+esc(m.class_name)+'</div>' : '')
             + '<div class="member-bio">'+esc(m.bio||'这个人很懒，还没写介绍...')+'</div>'
             + '</div>';
@@ -453,7 +484,7 @@ async function showMemberDetail(memberId) {
 
     let html = '<div style="text-align:center;">';
     if (avatarSrc) html += '<img src="'+avatarSrc+'" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--gold-light);margin-bottom:8px;">';
-    html += '<h2 style="color:var(--brown);">'+esc(m.name)+'</h2>';
+    html += '<h2 style="color:var(--brown);">'+esc(m.name)+(m.title?' <span style="font-size:0.75rem;background:var(--brown);color:#fff;padding:3px 10px;border-radius:12px;">'+esc(m.title)+'</span>':'')+'</h2>';
     if (m.class_name) html += '<p style="color:var(--gold);font-size:0.9rem;margin-bottom:4px;">📚 '+esc(m.class_name)+'</p>';
     html += '<p style="color:var(--text-light);margin-bottom:8px;">'+esc(m.bio||'暂无介绍')+'</p>';
     html += '<div class="action-bar" style="justify-content:center;" id="action-member-'+m.id+'"></div>';
@@ -539,6 +570,7 @@ async function renderMy() {
     ? '<img class="my-avatar" src="'+avatarSrc+'" alt="">'
     : '<div style="width:80px;height:80px;border-radius:50%;background:var(--gold-light);margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:2rem;">👤</div>';
   html += '<div class="my-name">'+esc(currentUser.name)+(isAdmin?' 👑':'')+'</div>';
+  if (currentUser.title) html += '<div style="display:inline-block;padding:2px 12px;background:var(--brown);color:#fff;border-radius:12px;font-size:0.78rem;margin-bottom:4px;">'+esc(currentUser.title)+'</div>';
   html += '<div class="my-role">'+(isAdmin?'管理员':'队员')+'</div>';
   html += '<div class="my-bio">'+esc(currentUser.bio||'点击下方编辑按钮写一段自我介绍吧~')+'</div>';
   html += '<button class="btn btn-outline btn-sm" id="btnEditBio">✏️ 编辑简介</button> ';
