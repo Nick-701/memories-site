@@ -121,7 +121,7 @@ function makeFeedCard(group, photoList, startIdx) {
   const count = group.length;
 
   // Check if text-only
-  const isTextOnly = first.category === 'text' || !first.filename;
+  const isTextOnly = !first.filename;
 
   // Photo grid
   let photosHtml = '';

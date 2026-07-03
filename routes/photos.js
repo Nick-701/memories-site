@@ -70,7 +70,7 @@ router.post('/', requireLogin, (req, res, next) => {
       const postGroup = require('crypto').randomBytes(8).toString('hex');
       const photos = [];
       req.files.forEach(file => {
-        const result = photoQueries.create.run(req.user.id, 'feed', file.filename, title, '', postGroup);
+        const result = photoQueries.create.run(req.user.id, 'individual', file.filename, title, '', postGroup);
         photos.push(photoQueries.findById.get(result.lastInsertRowid));
       });
       res.json({ success: true, photos, postGroup });
@@ -86,7 +86,7 @@ function handleTextPost(req, res) {
     const { title = '' } = req.body;
     if (!title.trim()) return res.status(400).json({ error: '请输入内容' });
     const postGroup = require('crypto').randomBytes(8).toString('hex');
-    const result = photoQueries.create.run(req.user.id, 'text', '', title, '', postGroup);
+    const result = photoQueries.create.run(req.user.id, 'individual', '', title, '', postGroup);
     const photo = photoQueries.findById.get(result.lastInsertRowid);
     res.json({ success: true, photos: [photo], postGroup, textOnly: true });
   } catch (e) {
